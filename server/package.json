@@ -1,4 +1,4 @@
-# Create a proper server/package.json
+
 cat > server/package.json << 'EOF'
 {
   "name": "server",
