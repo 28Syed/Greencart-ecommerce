@@ -1,4 +1,4 @@
-# Update vercel.json to properly handle both frontend and backend
+# Update vercel.json to specify the correct output directory
 cat > vercel.json << 'EOF'
 {
   "version": 2,
@@ -9,17 +9,9 @@ cat > vercel.json << 'EOF'
       "config": {
         "distDir": "dist"
       }
-    },
-    {
-      "src": "server/server.js",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/server/server.js"
-    },
     {
       "src": "/(.*)",
       "dest": "/client/dist/$1"
