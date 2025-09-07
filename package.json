@@ -1,5 +1,15 @@
 {
+  "name": "greencart-ecommerce",
+  "version": "1.0.0",
+  "description": "Modern e-commerce application with AI chatbot",
+  "scripts": {
+    "build": "cd client && npm install && npm run build",
+    "start": "cd server && npm install && node server.js",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run server",
+    "client": "cd client && npm run dev"
+  },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^8.2.2"
   }
 }
