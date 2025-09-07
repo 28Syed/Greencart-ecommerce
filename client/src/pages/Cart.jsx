@@ -4,7 +4,7 @@ import { assets, dummyAddress } from "../assets/assets";
 import toast from "react-hot-toast";
 
 const Cart = () => {
-    const {products, currency, cartItems, removeFromCart, getCartCount, updateCartItem, navigate, getCartAmount, axios, user, setCartItems} = useAppContext()
+    const {products, currency, cartItems, removeFromCart, getCartCount, updateCartItem, navigate, getCartAmount, axios, user, setCartItems, razorpayKeyId, url} = useAppContext()
     const [cartArray, setCartArray] = useState([])
     const [addresses, setAddresses] = useState([])
     const [showAddress, setShowAddress] = useState(false)
@@ -38,11 +38,31 @@ const Cart = () => {
         }
     }
 
+    useEffect(()=>{
+        if(products.length > 0 && cartItems){
+            getCart()
+        }
+    },[products, cartItems])
+
+    // Function to load the Razorpay script dynamically
+    const loadRazorpayScript = () => {
+        return new Promise((resolve) => {
+            const script = document.createElement("script");
+            script.src = "https://checkout.razorpay.com/v1/checkout.js";
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+        });
+    };
+
     const placeOrder = async ()=>{
         try {
             if(!selectedAddress){
                 return toast.error("Please select an address")
             }
+
+            // Calculate total amount with tax
+            let totalAmount = getCartAmount() + getCartAmount() * 2 / 100;
 
             // Place Order with COD
             if(paymentOption === "COD"){
@@ -59,30 +79,75 @@ const Cart = () => {
                 }else{
                     toast.error(data.message)
                 }
-            }else{
-                // Place Order with Stripe
-                const {data} = await axios.post('/api/order/stripe', {
-                    userId: user._id,
-                    items: cartArray.map(item=> ({product: item._id, quantity: item.quantity})),
-                    address: selectedAddress._id
-                })
+            } else if (paymentOption === "Online") {
+                // Place Order with Razorpay
+                const res = await loadRazorpayScript();
 
-                if(data.success){
-                    window.location.replace(data.url)
-                }else{
-                    toast.error(data.message)
+                if (!res) {
+                    toast.error("Razorpay SDK failed to load. Are you online?");
+                    return;
+                }
+
+                const orderData = await axios.post('/api/razorpay/order', {
+                    amount: totalAmount,
+                    addressId: selectedAddress._id,
+                    items: cartArray.map(item=> ({product: item._id, quantity: item.quantity})), // Add cart items here
+                });
+
+                if (orderData.data.success) {
+                    const { order, newOrderId } = orderData.data;
+
+                    const options = {
+                        key: razorpayKeyId,
+                        amount: order.amount,
+                        currency: order.currency,
+                        name: "GreenCart",
+                        description: "Payment for your order",
+                        order_id: order.id,
+                        handler: async function (response) {
+                            const paymentVerification = await axios.post('/api/razorpay/verify', {
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                orderId: newOrderId, // Your internal order ID
+                            });
+
+                            if (paymentVerification.data.success) {
+                                toast.success(paymentVerification.data.message);
+                                setCartItems({});
+                                navigate('/my-orders');
+                            } else {
+                                toast.error(paymentVerification.data.message);
+                                // Optionally delete the pending order if verification fails
+                                // await axios.delete(`/api/order/${newOrderId}`); 
+                            }
+                        },
+                        prefill: {
+                            name: user.name,
+                            email: user.email,
+                            contact: user.phone || "", // Optional: user's phone number
+                        },
+                        notes: {
+                            address: `${selectedAddress.street}, ${selectedAddress.city}, ${selectedAddress.state}`, 
+                            orderId: newOrderId, // Your internal order ID
+                        },
+                        theme: {
+                            color: "#80B82D", // GreenCart primary color
+                        },
+                    };
+
+                    const rzp1 = new window.Razorpay(options);
+                    rzp1.open();
+
+                } else {
+                    toast.error(orderData.data.message);
                 }
             }
         } catch (error) {
-            toast.error(error.message)
+            console.error("Error placing order:", error);
+            toast.error("Error placing order");
         }
     }
-
-    useEffect(()=>{
-        if(products.length > 0 && cartItems){
-            getCart()
-        }
-    },[products, cartItems])
 
 
     useEffect(()=>{
@@ -110,7 +175,7 @@ const Cart = () => {
                             <div onClick={()=>{
                                 navigate(`/products/${product.category.toLowerCase()}/${product._id}`); scrollTo(0,0)
                             }} className="cursor-pointer w-24 h-24 flex items-center justify-center border border-gray-300 rounded">
-                                <img className="max-w-full h-full object-cover" src={product.image[0]} alt={product.name} />
+                                <img className="max-w-full h-full object-cover" src={`${url}${product.image[0]}`} alt={product.name} />
                             </div>
                             <div>
                                 <p className="hidden md:block font-semibold">{product.name}</p>

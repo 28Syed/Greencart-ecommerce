@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema({
@@ -11,6 +12,7 @@ const orderSchema = new mongoose.Schema({
     status: {type: String, default: 'Order Placed'},
     paymentType: {type: String, required: true},
     isPaid: {type: Boolean, required: true, default: false},
+    razorpayOrderId: {type: String, default: null},
 },{ timestamps: true })
 
 const Order = mongoose.models.order || mongoose.model('order', orderSchema)

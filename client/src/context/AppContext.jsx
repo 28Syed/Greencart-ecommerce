@@ -7,6 +7,15 @@ import axios from "axios";
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
 
+// Axios Interceptor to add Authorization header
+axios.interceptors.request.use(function (config) {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 export const AppContext = createContext();
 
 export const AppContextProvider = ({children})=>{
@@ -21,6 +30,8 @@ export const AppContextProvider = ({children})=>{
 
     const [cartItems, setCartItems] = useState({})
     const [searchQuery, setSearchQuery] = useState({})
+    const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
+    const url = import.meta.env.VITE_BACKEND_URL; // Define url here
 
   // Fetch Seller Status
   const fetchSeller = async ()=>{
@@ -36,20 +47,61 @@ export const AppContextProvider = ({children})=>{
     }
   }
 
+  // New function to handle user login and token storage
+  const userLogin = (userData, userToken) => {
+    setUser(userData);
+    localStorage.setItem("token", userToken);
+    toast.success("Logged In Successfully");
+    setShowUserLogin(false);
+  };
+
+  // Logout function
+  const logout = async () => {
+    try {
+      const response = await axios.get('/api/user/logout');
+      if (response.data.success) {
+        setUser(null);
+        setIsSeller(false);
+        setCartItems({});
+        localStorage.removeItem("token");
+        toast.success("Logged Out Successfully");
+        navigate('/');
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast.error("Error logging out");
+    }
+  };
+
     // Fetch User Auth Status , User Data and Cart Items
 const fetchUser = async ()=>{
     try {
-        const {data} = await axios.get('api/user/is-auth');
+        const storedToken = localStorage.getItem("token"); // Get token from local storage
+        if (!storedToken) {
+            setUser(null); // No token, ensure user is null
+            return; // Exit if no token
+        }
+        
+        // Use the stored token to verify with the backend
+        const {data} = await axios.get('api/user/is-auth', { headers: { Authorization: `Bearer ${storedToken}` } });
         if (data.success){
             setUser(data.user)
             setCartItems(data.user.cartItems)
+            // localStorage.setItem("token", data.token); // Removed: token already from localStorage, or from login
+        }else{
+            setUser(null)
+            localStorage.removeItem("token"); // Clear token on failure
         }
     } catch (error) {
         setUser(null)
+        localStorage.removeItem("token"); // Clear token on error
     }
 }
 
-
+// Add token to context value
+const token = localStorage.getItem("token"); // This variable will be updated by useEffect on login
 
     // Fetch All Products
     const fetchProducts = async ()=>{
@@ -131,8 +183,18 @@ const getCartAmount = () =>{
     useEffect(()=>{
         const updateCart = async ()=>{
             try {
-                const { data } = await axios.post('/api/cart/update', {cartItems})
-                if (!data.success){
+                // Transform cartItems object to array of objects for the backend
+                const formattedCartItems = Object.keys(cartItems).map(itemId => ({
+                    product: itemId,
+                    quantity: cartItems[itemId]
+                }));
+                console.log("[App Context - Update Cart] Sending to backend:", formattedCartItems);
+
+                const { data } = await axios.post('/api/cart/update', {cartItems: formattedCartItems})
+                if (data.success){
+                    // Only refresh products if the cart update was successful
+                    fetchProducts(); 
+                } else{
                     toast.error(data.message)
                 }
             } catch (error) {
@@ -146,7 +208,7 @@ const getCartAmount = () =>{
     },[cartItems])
 
     const value = {navigate, user, setUser, setIsSeller, isSeller,
-        showUserLogin, setShowUserLogin, products, currency, addToCart, updateCartItem, removeFromCart, cartItems, searchQuery, setSearchQuery, getCartAmount, getCartCount, axios, fetchProducts, setCartItems
+        showUserLogin, setShowUserLogin, products, currency, addToCart, updateCartItem, removeFromCart, cartItems, searchQuery, setSearchQuery, getCartAmount, getCartCount, axios, fetchProducts, setCartItems, razorpayKeyId, url, token, userLogin, logout
     }
 
     return <AppContext.Provider value={value}>

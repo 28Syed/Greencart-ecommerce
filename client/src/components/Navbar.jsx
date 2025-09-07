@@ -3,9 +3,9 @@ import { NavLink } from 'react-router-dom'
 import { assets } from '../assets/assets'
 import { useAppContext } from '../context/AppContext'
 import toast from 'react-hot-toast'
+import { useState } from 'react'
 
 const Navbar = () => {
-    const [open, setOpen] = React.useState(false)
     const {user, setUser, setShowUserLogin, navigate, setSearchQuery, searchQuery, getCartCount, axios} = useAppContext();
 
     const logout = async ()=>{
@@ -47,6 +47,12 @@ const Navbar = () => {
          <img src={assets.search_icon} alt='search' className='w-4 h-4'/>
         </div>
 
+        {user && (
+          <div onClick={()=> navigate("/wishlist")} className="relative cursor-pointer">
+            <img src={assets.heart_icon} alt='wishlist' className='w-6 opacity-80'/>
+          </div>
+        )}
+
         <div onClick={()=> navigate("/cart")} className="relative cursor-pointer">
           <img src={assets.nav_cart_icon} alt='cart' className='w-6 opacity-80'/>
           <button className="absolute -top-2 -right-3 text-xs text-white bg-primary w-[18px] h-[18px] rounded-full">{getCartCount()}</button>
@@ -68,6 +74,11 @@ const Navbar = () => {
       </div>
 
 <div className='flex items-center gap-6 sm:hidden'>
+      {user && (
+        <div onClick={()=> navigate("/wishlist")} className="relative cursor-pointer">
+          <img src={assets.heart_icon} alt='wishlist' className='w-6 opacity-80'/>
+        </div>
+      )}
       <div onClick={()=> navigate("/cart")} className="relative cursor-pointer">
           <img src={assets.nav_cart_icon} alt='cart' className='w-6 opacity-80'/>
           <button className="absolute -top-2 -right-3 text-xs text-white bg-primary w-[18px] h-[18px] rounded-full">{getCartCount()}</button>
@@ -83,7 +94,10 @@ const Navbar = () => {
         <NavLink to="/" onClick={()=> setOpen(false)}>Home</NavLink>
         <NavLink to="/products" onClick={()=> setOpen(false)}>All Product</NavLink>
         {user && 
-        <NavLink to="/products" onClick={()=> setOpen(false)}>My Orders</NavLink>
+        <NavLink to="/my-orders" onClick={()=> setOpen(false)}>My Orders</NavLink>
+        }
+        {user && 
+        <NavLink to="/wishlist" onClick={()=> setOpen(false)}>Wishlist</NavLink>
         }
         <NavLink to="/" onClick={()=> setOpen(false)}>Contact</NavLink>
 
