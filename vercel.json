@@ -1,3 +1,4 @@
+# Create a properly formatted vercel.json
 cat > vercel.json << 'EOF'
 {
   "version": 2,
