@@ -16,3 +16,4 @@ coverage/
 .idea/
 *.log
 
+server/.env
