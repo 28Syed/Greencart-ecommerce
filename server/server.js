@@ -1,69 +1,68 @@
-import cookieParser from 'cookie-parser';
 import express from 'express';
 import cors from 'cors';
-import path from 'path'; // Import path module
-import { fileURLToPath } from 'url'; // Import fileURLToPath
-import connectDB from './configs/db.js';
-import 'dotenv/config';
-import userRouter from './routes/userRoute.js';
-import sellerRouter from './routes/sellerRoute.js';
-import connectCloudinary from './configs/cloudinary.js';
-import productRouter from './routes/productRoute.js';
-import Product from './models/Product.js';
-import cartRouter from './routes/cartRoute.js';
-import addressRouter from './routes/addressRoute.js';
-import Address from './models/Address.js';
-import Chat from './models/Chat.js';
-import orderRouter from './routes/orderRoute.js';
-import reviewRouter from './routes/reviewRoute.js';
-import wishlistRouter from './routes/wishlistRoute.js';
-import razorpayRouter from './routes/razorpayRoute.js';
-import chatRouter from './routes/chatRoute.js';
-// import { stripeWebhooks } from './controllers/orderController.js';
 
 const app = express();
 const port = process.env.PORT || 4000;
 
-// Get __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-await connectDB()
-await connectCloudinary()
-
-// Allow multiple origins
-const allowedOrigins = ['http://localhost:5173', 'https://greencart-deploy-9xaj.vercel.app']
-
-// app.post('/stripe', express.raw({type: 'application/json'}), stripeWebhooks)
-
-// Middleware configuration
+// Middleware
 app.use(express.json());
-app.use(cookieParser());
-app.use(cors({origin: allowedOrigins, credentials: true}));
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'https://greencart-frontend-lqi9ktkjt-syed-ikrams-projects.vercel.app',
+        'https://greencart-frontend.vercel.app'
+    ],
+    credentials: true
+}));
 
-// Serve static assets from the client/src/assets directory
-app.use('/assets', cors({origin: allowedOrigins}), express.static(path.join(__dirname, '..', 'client', 'src', 'assets')));
-
-app.get('/', (req, res) => res.send("API is Working"));
-app.use('/api/user', userRouter)
-app.use('/api/seller', sellerRouter)
-app.use('/api/product', productRouter)
-app.use('/api/cart', cartRouter)
-app.use('/api/address', addressRouter)
-app.use('/api/order', orderRouter)
-app.use('/api/review', reviewRouter)
-app.use('/api/wishlist', wishlistRouter)
-app.use('/api/razorpay', razorpayRouter)
-app.use('/api/chat', chatRouter)
-
-// Global uncaught exception handler for better debugging
-process.on('uncaughtException', (err) => {
-    console.error('[UNCAUGHT EXCEPTION] Caught exception:', err);
-    // It's important to exit the process after an uncaught exception
-    // to prevent the application from being in an unknown state.
-    process.exit(1);
+// Routes
+app.get('/', (req, res) => {
+    res.json({ message: "API is Working" });
 });
 
-app.listen(port, ()=>{
-    console.log(`Server is running on http://localhost:${port}`)
-})
+app.get('/api/products', (req, res) => {
+    res.json([
+        {
+            _id: "1",
+            name: "Fresh Apples",
+            price: 299,
+            image: "/assets/apple_image.png",
+            category: "fruits",
+            inStock: true
+        },
+        {
+            _id: "2",
+            name: "Organic Bananas", 
+            price: 199,
+            image: "/assets/banana_image_1.png",
+            category: "fruits",
+            inStock: true
+        },
+        {
+            _id: "3",
+            name: "Fresh Carrots",
+            price: 149,
+            image: "/assets/carrot_image.png",
+            category: "vegetables",
+            inStock: true
+        }
+    ]);
+});
+
+app.get('/api/user/login', (req, res) => {
+    res.json({ message: "Login endpoint working" });
+});
+
+app.get('/api/seller/is-auth', (req, res) => {
+    res.json({ message: "Seller auth endpoint working" });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Something went wrong!' });
+});
+
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+});
