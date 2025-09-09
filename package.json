@@ -1,0 +1,9 @@
+{
+  "name": "greencart-ecommerce",
+  "version": "1.0.0",
+  "description": "Full-stack e-commerce application",
+  "scripts": {
+    "build": "cd client && npm install && npm run build",
+    "start": "cd server && npm install && node server.js"
+  }
+}
