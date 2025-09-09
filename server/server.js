@@ -3,10 +3,8 @@ import express from 'express';
 const app = express();
 const port = process.env.PORT || 4000;
 
-// Middleware
 app.use(express.json());
 
-// CORS middleware (built-in)
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -18,7 +16,6 @@ app.use((req, res, next) => {
     }
 });
 
-// Routes
 app.get('/', (req, res) => {
     res.json({ message: "API is Working" });
 });
@@ -40,14 +37,6 @@ app.get('/api/products', (req, res) => {
             image: "/assets/banana_image_1.png",
             category: "fruits",
             inStock: true
-        },
-        {
-            _id: "3",
-            name: "Fresh Carrots",
-            price: 149,
-            image: "/assets/carrot_image.png",
-            category: "vegetables",
-            inStock: true
         }
     ]);
 });
@@ -58,12 +47,6 @@ app.get('/api/user/login', (req, res) => {
 
 app.get('/api/seller/is-auth', (req, res) => {
     res.json({ message: "Seller auth endpoint working" });
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    res.status(500).json({ error: 'Something went wrong!' });
 });
 
 app.listen(port, () => {
