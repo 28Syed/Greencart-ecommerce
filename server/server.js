@@ -1,5 +1,4 @@
-import express from 'express';
-
+const express = require('express');
 const app = express();
 const port = process.env.PORT || 4000;
 
@@ -29,24 +28,8 @@ app.get('/api/products', (req, res) => {
             image: "/assets/apple_image.png",
             category: "fruits",
             inStock: true
-        },
-        {
-            _id: "2",
-            name: "Organic Bananas", 
-            price: 199,
-            image: "/assets/banana_image_1.png",
-            category: "fruits",
-            inStock: true
         }
     ]);
-});
-
-app.get('/api/user/login', (req, res) => {
-    res.json({ message: "Login endpoint working" });
-});
-
-app.get('/api/seller/is-auth', (req, res) => {
-    res.json({ message: "Seller auth endpoint working" });
 });
 
 app.listen(port, () => {
