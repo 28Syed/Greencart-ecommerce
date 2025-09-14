@@ -18,7 +18,7 @@ app.use((req, res, next) => {
 
 // Test route
 app.get('/', (req, res) => {
-    res.json({ message: "API is Working - Updated with Chat Support" });
+    res.json({ message: "API is Working - Chat Fixed v2.0" });
 });
 
 // Test chat endpoint

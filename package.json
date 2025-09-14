@@ -4,7 +4,7 @@
   "description": "Full-stack e-commerce application",
   "scripts": {
     "build": "cd client && npm install && npm run build",
-    "start": "node api/index.js"
+    "start": "node ./api/index.js"
   },
   "dependencies": {
     "express": "^4.18.2"

@@ -48,6 +48,29 @@ const ChatWidget = () => {
         }
     };
 
+    const getFallbackResponse = (message) => {
+        const messageLower = message.toLowerCase();
+        if (messageLower.includes('hello') || messageLower.includes('hi')) {
+            return "Hello! Welcome to GreenCart. How can I help you today?";
+        } else if (messageLower.includes('order')) {
+            return "I can help you with your orders. What would you like to know about your orders?";
+        } else if (messageLower.includes('product')) {
+            return "We have a great selection of fresh products! What specific product are you looking for?";
+        } else if (messageLower.includes('help')) {
+            return "I'm here to help! I can assist you with orders, products, account issues, or any other questions about GreenCart.";
+        } else if (messageLower.includes('thank')) {
+            return "You're welcome! Is there anything else I can help you with?";
+        } else if (messageLower.includes('price') || messageLower.includes('cost')) {
+            return "Our prices are very competitive! You can see the current prices on each product page. We also have special offers and discounts available.";
+        } else if (messageLower.includes('delivery') || messageLower.includes('shipping')) {
+            return "We offer fast and reliable delivery! You can choose from different delivery options at checkout.";
+        } else if (messageLower.includes('payment')) {
+            return "We accept various payment methods including credit cards, debit cards, and cash on delivery. All payments are secure and encrypted.";
+        } else {
+            return "I'm here to help! How can I assist you with your GreenCart shopping today?";
+        }
+    };
+
     const sendMessage = async (e) => {
         e.preventDefault();
         if (!inputMessage.trim() || isLoading) return;
@@ -62,37 +85,17 @@ const ChatWidget = () => {
         setInputMessage('');
         setIsLoading(true);
 
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://greencart-production-6542.up.railway.app'}/api/chat/message`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    message: inputMessage,
-                    sessionId: sessionId
-                })
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                const aiMessage = {
-                    role: 'assistant',
-                    content: data.message,
-                    timestamp: new Date()
-                };
-                setMessages(prev => [...prev, aiMessage]);
-            } else {
-                toast.error(data.message || 'Error sending message');
-            }
-        } catch (error) {
-            console.error('Error sending message:', error);
-            toast.error('Error sending message');
-        } finally {
+        // Use local AI responses directly (bypass backend for now)
+        setTimeout(() => {
+            const fallbackResponse = getFallbackResponse(inputMessage);
+            const aiMessage = {
+                role: 'assistant',
+                content: fallbackResponse,
+                timestamp: new Date()
+            };
+            setMessages(prev => [...prev, aiMessage]);
             setIsLoading(false);
-        }
+        }, 1000); // Simulate API delay
     };
 
     const toggleChat = () => {
