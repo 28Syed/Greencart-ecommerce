@@ -1,18 +1,10 @@
 import express from 'express';
 import cors from 'cors';
-import Razorpay from 'razorpay';
 import dotenv from 'dotenv';
-import crypto from 'crypto';
 
 dotenv.config();
 
 const app = express();
-
-// Initialize Razorpay
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_RH7Vojm8llKsRb',
-    key_secret: process.env.RAZORPAY_KEY_SECRET || 'U839sMZljuqAfnOmMUz7eVZg'
-});
 const port = process.env.PORT || 4000;
 
 // Middleware
@@ -20,45 +12,11 @@ app.use(express.json());
 
 // CORS configuration
 app.use(cors({
-    origin: [
-        'https://playful-tarsier-42b431.netlify.app', 
-        'https://greencart-frontend-kt3gul3hx-syed-ikrams-projects.vercel.app',
-        'https://greencart-frontend-5x99a0y5t-syed-ikrams-projects.vercel.app',
-        'https://greencart-frontend-8qleaimh3-syed-ikrams-projects.vercel.app',
-        'https://greencart-frontend-qj57wbtxd-syed-ikrams-projects.vercel.app',
-        'http://localhost:3000', 
-        'http://localhost:5173'
-    ],
+    origin: ['https://playful-tarsier-42b431.netlify.app', 'http://localhost:3000', 'http://localhost:5173'],
     credentials: false,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
-
-// Authentication middleware
-const authenticateUser = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({
-            success: false,
-            message: "Access denied. No token provided."
-        });
-    }
-    
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    
-    // For demo purposes, accept any token (in real app, verify JWT)
-    if (!token || token.length < 10) {
-        return res.status(401).json({
-            success: false,
-            message: "Invalid token."
-        });
-    }
-    
-    // In a real app, you would verify the JWT token here
-    // For now, we'll just check if a token exists
-    req.user = { id: "demo_user", name: "Demo User" }; // Mock user
-    next();
-};
 
 // Test route
 app.get('/', (req, res) => {
@@ -92,15 +50,9 @@ app.get('/api/user/is-auth', (req, res) => {
     });
 });
 
-app.get('/api/user/logout', (req, res) => {
-    res.json({
-        success: true,
-        message: "Logged out successfully"
-    });
-});
-
-// Complete product list - shared between product endpoint and getProductById function
-const completeProductList = [
+// Product routes
+app.get('/api/product/list', (req, res) => {
+    res.json([
         // Vegetables
         {
             _id: "gd46g23h",
@@ -108,7 +60,7 @@ const completeProductList = [
             category: "Vegetables",
             price: 25,
             offerPrice: 20,
-            image: ["/assets/potato_image_1-Dunc3diJ.png", "/assets/potato_image_2-NrNj7MY8.png", "/assets/potato_image_3-v9M48Pyt.png", "/assets/potato_image_4-5VP_afI2.png"],
+            image: ["/src/assets/potato_image_1.png", "/src/assets/potato_image_2.png", "/src/assets/potato_image_3.png", "/src/assets/potato_image_4.png"],
             description: [
                 "Fresh and organic",
                 "Rich in carbohydrates",
@@ -124,7 +76,7 @@ const completeProductList = [
             category: "Vegetables",
             price: 40,
             offerPrice: 35,
-            image: ["/assets/tomato_image-DTyvfqsS.png"],
+            image: ["/src/assets/tomato_image.png"],
             description: [
                 "Juicy and ripe",
                 "Rich in Vitamin C",
@@ -141,7 +93,7 @@ const completeProductList = [
             category: "Vegetables",
             price: 30,
             offerPrice: 28,
-            image: ["/assets/carrot_image-GkwsIFHl.png"],
+            image: ["/src/assets/carrot_image.png"],
             description: [
                 "Sweet and crunchy",
                 "Good for eyesight",
@@ -157,7 +109,7 @@ const completeProductList = [
             category: "Vegetables",
             price: 18,
             offerPrice: 15,
-            image: ["/assets/spinach_image_1-BFTvDCDF.png"],
+            image: ["/src/assets/spinach_image_1.png"],
             description: [
                 "Rich in iron",
                 "High in vitamins",
@@ -173,7 +125,7 @@ const completeProductList = [
             category: "Vegetables",
             price: 22,
             offerPrice: 19,
-            image: ["/assets/onion_image_1-GN6dACW5.png"],
+            image: ["/src/assets/onion_image_1.png"],
             description: [
                 "Fresh and pungent",
                 "Perfect for cooking",
@@ -191,7 +143,7 @@ const completeProductList = [
             category: "Fruits",
             price: 120,
             offerPrice: 110,
-            image: ["/assets/apple_image-BOKTWnM8.png"],
+            image: ["/src/assets/apple_image.png"],
             description: [
                 "Crisp and juicy",
                 "Rich in fiber",
@@ -209,7 +161,7 @@ const completeProductList = [
             category: "Fruits",
             price: 80,
             offerPrice: 75,
-            image: ["/assets/orange_image-DfoqYLig.png"],
+            image: ["/src/assets/orange_image.png"],
             description: [
                 "Juicy and sweet",
                 "Rich in Vitamin C",
@@ -225,7 +177,7 @@ const completeProductList = [
             category: "Fruits",
             price: 50,
             offerPrice: 45,
-            image: ["/assets/banana_image_1-CqUXbIlz.png"],
+            image: ["/src/assets/banana_image_1.png"],
             description: [
                 "Sweet and ripe",
                 "High in potassium",
@@ -241,7 +193,7 @@ const completeProductList = [
             category: "Fruits",
             price: 150,
             offerPrice: 140,
-            image: ["/assets/mango_image_1-BQM7kW4l.png"],
+            image: ["/src/assets/mango_image_1.png"],
             description: [
                 "Sweet and flavorful",
                 "Perfect for smoothies and desserts",
@@ -257,7 +209,7 @@ const completeProductList = [
             category: "Fruits",
             price: 70,
             offerPrice: 65,
-            image: ["/assets/grapes_image_1-D2qP9V_J.png"],
+            image: ["/src/assets/grapes_image_1.png"],
             description: [
                 "Fresh and juicy",
                 "Rich in antioxidants",
@@ -275,7 +227,7 @@ const completeProductList = [
             category: "Dairy",
             price: 60,
             offerPrice: 55,
-            image: ["/assets/amul_milk_image-BN77drpI.png"],
+            image: ["/src/assets/amul_milk_image.png"],
             description: [
                 "Pure and fresh",
                 "Rich in calcium",
@@ -292,7 +244,7 @@ const completeProductList = [
             category: "Dairy",
             price: 90,
             offerPrice: 85,
-            image: ["/assets/paneer_image-DGuXuMzW.png"],
+            image: ["/src/assets/paneer_image.png"],
             description: [
                 "Soft and fresh",
                 "Rich in protein",
@@ -308,7 +260,7 @@ const completeProductList = [
             category: "Dairy",
             price: 90,
             offerPrice: 85,
-            image: ["/assets/eggs_image-DhkspuYm.png"],
+            image: ["/src/assets/eggs_image.png"],
             description: [
                 "Farm fresh",
                 "Rich in protein",
@@ -324,7 +276,7 @@ const completeProductList = [
             category: "Dairy",
             price: 90,
             offerPrice: 85,
-            image: ["/assets/paneer_image_2-BpCbwr8-.png"],
+            image: ["/src/assets/paneer_image_2.png"],
             description: [
                 "Soft and fresh",
                 "Rich in protein",
@@ -340,7 +292,7 @@ const completeProductList = [
             category: "Dairy",
             price: 140,
             offerPrice: 130,
-            image: ["/assets/cheese_image-Dbia_8kh.png"],
+            image: ["/src/assets/cheese_image.png"],
             description: [
                 "Creamy and delicious",
                 "Perfect for pizzas and sandwiches",
@@ -358,7 +310,7 @@ const completeProductList = [
             category: "Drinks",
             price: 80,
             offerPrice: 75,
-            image: ["/assets/coca_cola_image-2N9qnj0q.png"],
+            image: ["/src/assets/coca_cola_image.png"],
             description: [
                 "Refreshing and fizzy",
                 "Perfect for parties and gatherings",
@@ -374,7 +326,7 @@ const completeProductList = [
             category: "Drinks",
             price: 78,
             offerPrice: 73,
-            image: ["/assets/pepsi_image-DfLDubHS.png"],
+            image: ["/src/assets/pepsi_image.png"],
             description: [
                 "Chilled and refreshing",
                 "Perfect for celebrations",
@@ -390,7 +342,7 @@ const completeProductList = [
             category: "Drinks",
             price: 79,
             offerPrice: 74,
-            image: ["/assets/sprite_image_1-BX1jiHYF.png"],
+            image: ["/src/assets/sprite_image_1.png"],
             description: [
                 "Refreshing citrus taste",
                 "Perfect for hot days",
@@ -406,7 +358,7 @@ const completeProductList = [
             category: "Drinks",
             price: 77,
             offerPrice: 72,
-            image: ["/assets/fanta_image_1-CmWc6OFO.png"],
+            image: ["/src/assets/fanta_image_1.png"],
             description: [
                 "Sweet and fizzy",
                 "Great for parties and gatherings",
@@ -422,7 +374,7 @@ const completeProductList = [
             category: "Drinks",
             price: 76,
             offerPrice: 71,
-            image: ["/assets/seven_up_image_1-CoYFONJ_.png"],
+            image: ["/src/assets/seven_up_image_1.png"],
             description: [
                 "Refreshing lemon-lime flavor",
                 "Perfect for refreshing",
@@ -440,7 +392,7 @@ const completeProductList = [
             category: "Grains",
             price: 550,
             offerPrice: 520,
-            image: ["/assets/basmati_rice_image-ArdSOXu_.png"],
+            image: ["/src/assets/basmati_rice_image.png"],
             description: [
                 "Long grain and aromatic",
                 "Perfect for biryani and pulao",
@@ -456,7 +408,7 @@ const completeProductList = [
             category: "Grains",
             price: 250,
             offerPrice: 230,
-            image: ["/assets/wheat_flour_image-Bc-YwWg1.png"],
+            image: ["/src/assets/wheat_flour_image.png"],
             description: [
                 "High-quality whole wheat",
                 "Soft and fluffy rotis",
@@ -472,7 +424,7 @@ const completeProductList = [
             category: "Grains",
             price: 450,
             offerPrice: 420,
-            image: ["/assets/quinoa_image-CoUQXhH4.png"],
+            image: ["/src/assets/quinoa_image.png"],
             description: [
                 "High in protein and fiber",
                 "Gluten-free",
@@ -488,7 +440,7 @@ const completeProductList = [
             category: "Grains",
             price: 120,
             offerPrice: 110,
-            image: ["/assets/brown_rice_image-CQimXrOA.png"],
+            image: ["/src/assets/brown_rice_image.png"],
             description: [
                 "Whole grain and nutritious",
                 "Helps in weight management",
@@ -504,7 +456,7 @@ const completeProductList = [
             category: "Grains",
             price: 150,
             offerPrice: 140,
-            image: ["/assets/barley_image-BWx2eT4d.png"],
+            image: ["/src/assets/barley_image.png"],
             description: [
                 "Rich in fiber",
                 "Helps improve digestion",
@@ -522,7 +474,7 @@ const completeProductList = [
             category: "Bakery",
             price: 40,
             offerPrice: 35,
-            image: ["/assets/brown_bread_image-D908RMy_.png"],
+            image: ["/src/assets/brown_bread_image.png"],
             description: [
                 "Soft and healthy",
                 "Made from whole wheat",
@@ -538,7 +490,7 @@ const completeProductList = [
             category: "Bakery",
             price: 50,
             offerPrice: 45,
-            image: ["/assets/butter_croissant_image-CMp4mLHU.png"],
+            image: ["/src/assets/butter_croissant_image.png"],
             description: [
                 "Flaky and buttery",
                 "Freshly baked",
@@ -554,7 +506,7 @@ const completeProductList = [
             category: "Bakery",
             price: 350,
             offerPrice: 325,
-            image: ["/assets/chocolate_cake_image-grvCJisa.png"],
+            image: ["/src/assets/chocolate_cake_image.png"],
             description: [
                 "Rich and moist",
                 "Made with premium cocoa",
@@ -570,7 +522,7 @@ const completeProductList = [
             category: "Bakery",
             price: 45,
             offerPrice: 40,
-            image: ["/assets/whole_wheat_bread_image-DpTTwi5t.png"],
+            image: ["/src/assets/whole_wheat_bread_image.png"],
             description: [
                 "Healthy and nutritious",
                 "Made with whole wheat flour",
@@ -586,7 +538,7 @@ const completeProductList = [
             category: "Bakery",
             price: 100,
             offerPrice: 90,
-            image: ["/assets/vanilla_muffins_image-CRgrOTxJ.png"],
+            image: ["/src/assets/vanilla_muffins_image.png"],
             description: [
                 "Soft and fluffy",
                 "Perfect for a quick snack",
@@ -604,7 +556,7 @@ const completeProductList = [
             category: "Instant",
             price: 55,
             offerPrice: 50,
-            image: ["/assets/maggi_image-DD7JXh5a.png"],
+            image: ["/src/assets/maggi_image.png"],
             description: [
                 "Instant and easy to cook",
                 "Delicious taste",
@@ -620,7 +572,7 @@ const completeProductList = [
             category: "Instant",
             price: 45,
             offerPrice: 40,
-            image: ["/assets/top_ramen_image-DBcbphk7.png"],
+            image: ["/src/assets/top_ramen_image.png"],
             description: [
                 "Quick and easy to prepare",
                 "Spicy and flavorful",
@@ -636,7 +588,7 @@ const completeProductList = [
             category: "Instant",
             price: 35,
             offerPrice: 30,
-            image: ["/assets/knorr_soup_image-8VigJvZo.png"],
+            image: ["/src/assets/knorr_soup_image.png"],
             description: [
                 "Convenient for on-the-go",
                 "Healthy and nutritious",
@@ -652,7 +604,7 @@ const completeProductList = [
             category: "Instant",
             price: 50,
             offerPrice: 45,
-            image: ["/assets/yippee_image-Chd9IoCI.png"],
+            image: ["/src/assets/yippee_image.png"],
             description: [
                 "Non-fried noodles for healthier choice",
                 "Tasty and filling",
@@ -668,7 +620,7 @@ const completeProductList = [
             category: "Instant",
             price: 40,
             offerPrice: 35,
-            image: ["/assets/maggi_oats_image-BROzZc4u.png"],
+            image: ["/src/assets/maggi_oats_image.png"],
             description: [
                 "Healthy alternative with oats",
                 "Good for digestion",
@@ -678,11 +630,7 @@ const completeProductList = [
             updatedAt: "2025-03-25T07:18:13.103Z",
             inStock: true,
         }
-    ];
-
-// Product routes
-app.get('/api/product/list', (req, res) => {
-    res.json(completeProductList);
+    ]);
 });
 
 // Cart routes
@@ -714,87 +662,22 @@ app.get('/api/address/get', (req, res) => {
     });
 });
 
-// In-memory wishlist storage (in production, this would be in a database)
-const wishlists = {};
-
-// In-memory order storage (in production, this would be in a database)
-const orders = {};
-
-// Store pending orders with cart data
-const pendingOrders = {};
-
-// Helper function to get product by ID
-const getProductById = (productId) => {
-    // Use the complete product list instead of hardcoded subset
-    return completeProductList.find(p => p._id === productId) || {
-        _id: productId,
-        name: `Product ${productId}`,
-        category: "General",
-        price: 100,
-        offerPrice: 90,
-        image: ["/assets/apple_image-BOKTWnM8.png"],
-        inStock: true,
-    };
-};
-
 // Wishlist routes
 app.get('/api/wishlist', (req, res) => {
-    const userId = req.headers.authorization ? "demo_user" : "guest";
-    const userWishlist = wishlists[userId] || [];
-    
     res.json({
         success: true,
         wishlist: {
-            products: userWishlist
+            products: [
+                {
+                    _id: "1",
+                    name: "Fresh Apples",
+                    price: 299,
+                    image: ["/src/assets/apple_image.png"],
+                    category: "fruits",
+                    inStock: true
+                }
+            ]
         }
-    });
-});
-
-// Add to wishlist
-app.post('/api/wishlist/add/:productId', authenticateUser, (req, res) => {
-    const { productId } = req.params;
-    const userId = req.user.id;
-    
-    // Initialize wishlist for user if it doesn't exist
-    if (!wishlists[userId]) {
-        wishlists[userId] = [];
-    }
-    
-    // Check if product is already in wishlist
-    const existingIndex = wishlists[userId].findIndex(p => p._id === productId);
-    if (existingIndex === -1) {
-        // Get the actual product data
-        const product = getProductById(productId);
-        wishlists[userId].push(product);
-    }
-    
-    res.json({
-        success: true,
-        message: "Product added to wishlist successfully",
-        userId: userId
-    });
-});
-
-// Remove from wishlist
-app.delete('/api/wishlist/remove/:productId', authenticateUser, (req, res) => {
-    const { productId } = req.params;
-    const userId = req.user.id;
-    
-    // Initialize wishlist for user if it doesn't exist
-    if (!wishlists[userId]) {
-        wishlists[userId] = [];
-    }
-    
-    // Remove product from wishlist
-    const existingIndex = wishlists[userId].findIndex(p => p._id === productId);
-    if (existingIndex !== -1) {
-        wishlists[userId].splice(existingIndex, 1);
-    }
-    
-    res.json({
-        success: true,
-        message: "Product removed from wishlist successfully",
-        userId: userId
     });
 });
 
@@ -816,29 +699,6 @@ app.get('/api/review/:productId', (req, res) => {
 
 // Order routes
 app.get('/api/order/user', (req, res) => {
-    const userId = req.headers.authorization ? "demo_user" : "guest";
-    const userOrders = orders[userId] || [];
-    
-    res.json({ 
-        success: true,
-        orders: userOrders
-    });
-});
-
-// Seller routes
-app.get('/api/seller/is-auth', (req, res) => {
-    res.json({ 
-        success: true,
-        message: "Seller authenticated",
-        seller: {
-            _id: "seller123",
-            name: "Test Seller",
-            email: "seller@example.com"
-        }
-    });
-});
-
-app.get('/api/order/seller', (req, res) => {
     res.json({
         success: true,
         orders: [
@@ -849,7 +709,7 @@ app.get('/api/order/seller', (req, res) => {
                         product: {
                             _id: "1",
                             name: "Fresh Apples",
-                            image: ["/assets/apple_image-BOKTWnM8.png"],
+                            image: ["/src/assets/apple_image.png"],
                             category: "fruits"
                         },
                         quantity: 2
@@ -875,211 +735,66 @@ app.get('/api/order/seller', (req, res) => {
     });
 });
 
-
-// COD Order endpoint
-app.post('/api/order/cod', authenticateUser, (req, res) => {
-    const { items, address, amount } = req.body;
-    const userId = req.user.id;
-    const orderId = "order_" + Date.now();
-    
-    // Initialize orders for user if it doesn't exist
-    if (!orders[userId]) {
-        orders[userId] = [];
-    }
-    
-    // Create order with actual products
-    const orderItems = items.map(item => ({
-        product: getProductById(item.product),
-        quantity: item.quantity
-    }));
-    
-    const newOrder = {
-        _id: orderId,
-        items: orderItems,
-        amount: amount,
-        paymentType: "COD",
-        status: "Placed",
-        isPaid: false,
-        address: address,
-        createdAt: new Date().toISOString()
-    };
-    
-    orders[userId].push(newOrder);
-    
+// Seller routes
+app.get('/api/seller/is-auth', (req, res) => {
     res.json({
         success: true,
-        message: "Order placed successfully with Cash on Delivery",
-        orderId: orderId,
-        userId: userId
+        message: "Seller authenticated",
+        seller: {
+            _id: "seller123",
+            name: "Test Seller",
+            email: "seller@example.com"
+        }
     });
 });
 
-// Razorpay Order Creation
-app.post('/api/razorpay/order', authenticateUser, async (req, res) => {
-    try {
-        const { amount, addressId, items } = req.body;
-        
-        console.log("Razorpay order creation request:", { amount, addressId, items });
-        
-        // Create real Razorpay order
-        const orderOptions = {
-            amount: Math.round(amount * 100), // Convert to paise
-            currency: "INR",
-            receipt: "receipt_" + Date.now(),
-            notes: {
-                userId: req.user.id,
-                addressId: addressId,
-                itemCount: items.length
+app.get('/api/order/seller', (req, res) => {
+    res.json({
+        success: true,
+        orders: [
+            {
+                _id: "order1",
+                items: [
+                    {
+                        product: {
+                            _id: "1",
+                            name: "Fresh Apples",
+                            image: ["/src/assets/apple_image.png"],
+                            category: "fruits"
+                        },
+                        quantity: 2
+                    }
+                ],
+                amount: 598,
+                paymentType: "COD",
+                status: "Delivered",
+                isPaid: true,
+                address: {
+                    firstName: "John",
+                    lastName: "Doe",
+                    street: "123 Main St",
+                    city: "New York",
+                    state: "NY",
+                    zipcode: "10001",
+                    country: "USA",
+                    phone: "123-456-7890"
+                },
+                createdAt: new Date().toISOString()
             }
-        };
-        
-        console.log("Creating real Razorpay order:", orderOptions);
-        
-        const order = await razorpay.orders.create(orderOptions);
-        
-        console.log("Razorpay order created successfully:", order);
-        
-        // Store the cart data for this order
-        pendingOrders[order.id] = {
-            items: items,
-            amount: amount,
-            addressId: addressId,
-            userId: req.user.id
-        };
-        
-        res.json({
-            success: true,
-            order: order,
-            userId: req.user.id
-        });
-    } catch (error) {
-        console.error("Razorpay order creation error:", error);
-        res.status(500).json({
-            success: false,
-            message: "Failed to create payment order",
-            error: error.message
-        });
-    }
-});
-
-// Razorpay Payment Verification
-app.post('/api/razorpay/verify', authenticateUser, async (req, res) => {
-    try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId } = req.body;
-        
-        console.log("Payment verification request:", { razorpay_order_id, razorpay_payment_id, orderId });
-        
-        // Verify Razorpay signature
-        const crypto = require('crypto');
-        const body = razorpay_order_id + "|" + razorpay_payment_id;
-        const expectedSignature = crypto
-            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "U839sMZljuqAfnOmMUz7eVZg")
-            .update(body.toString())
-            .digest("hex");
-        
-        const isAuthentic = expectedSignature === razorpay_signature;
-        
-        if (isAuthentic && razorpay_order_id && razorpay_payment_id) {
-            // Store the order in memory (in production, this would be in database)
-            const userId = req.user.id;
-            if (!orders[userId]) {
-                orders[userId] = [];
-            }
-            
-            // Get the stored cart data for this order
-            const pendingOrder = pendingOrders[orderId];
-            
-            if (pendingOrder) {
-                // Create order with ACTUAL products from the stored cart data
-                const actualOrder = {
-                    _id: orderId,
-                    items: pendingOrder.items.map(item => ({
-                        product: getProductById(item.product),
-                        quantity: item.quantity
-                    })),
-                    amount: pendingOrder.amount,
-                    paymentType: "Online",
-                    status: "Paid",
-                    isPaid: true,
-                    address: {
-                        firstName: "User",
-                        lastName: "Name",
-                        street: "Sample Address",
-                        city: "Sample City",
-                        state: "Sample State",
-                        zipcode: "12345",
-                        country: "India",
-                        phone: "1234567890"
-                    },
-                    createdAt: new Date().toISOString()
-                };
-                
-                orders[userId].push(actualOrder);
-                
-                // Clean up pending order
-                delete pendingOrders[orderId];
-            } else {
-                // Fallback if no pending order found
-                const fallbackOrder = {
-                    _id: orderId,
-                    items: [
-                        {
-                            product: getProductById("ek54j45k"), // Mango
-                            quantity: 1
-                        }
-                    ],
-                    amount: 140,
-                    paymentType: "Online",
-                    status: "Paid",
-                    isPaid: true,
-                    address: {
-                        firstName: "User",
-                        lastName: "Name",
-                        street: "Sample Address",
-                        city: "Sample City",
-                        state: "Sample State",
-                        zipcode: "12345",
-                        country: "India",
-                        phone: "1234567890"
-                    },
-                    createdAt: new Date().toISOString()
-                };
-                
-                orders[userId].push(fallbackOrder);
-            }
-            
-            res.json({
-                success: true,
-                message: "Payment verified successfully",
-                orderId: orderId,
-                userId: req.user.id
-            });
-        } else {
-            res.status(400).json({
-                success: false,
-                message: isAuthentic ? "Payment verification failed - Missing payment details" : "Payment verification failed - Invalid signature"
-            });
-        }
-    } catch (error) {
-        console.error("Payment verification error:", error);
-        res.status(500).json({
-            success: false,
-            message: "Payment verification failed",
-            error: error.message
-        });
-    }
+        ]
+    });
 });
 
 // Chat routes
 app.post('/api/chat/session', (req, res) => {
-    res.json({ 
+    res.json({
         success: true,
         sessionId: "session123"
     });
 });
 
 app.post('/api/chat/message', (req, res) => {
-    res.json({ 
+    res.json({
         success: true,
         message: "AI response"
     });

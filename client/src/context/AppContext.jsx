@@ -4,23 +4,62 @@ import { dummyProducts } from "../assets/assets";
 import toast from "react-hot-toast";
 import axios from "axios";
 
-axios.defaults.withCredentials = true;
-axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
-
+// axios.defaults.withCredentials = true; // Commented out as it might cause CORS issues
+const backendURL = 'https://greencart-production-6542.up.railway.app';
+console.log('Backend URL:', backendURL);
+console.log('Environment VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
+axios.defaults.baseURL = backendURL; 
 // Axios Interceptor to add Authorization header
 axios.interceptors.request.use(function (config) {
+    console.log('=== AXIOS REQUEST INTERCEPTOR ===');
+    console.log('Request URL:', config.url);
+    console.log('Full URL:', config.baseURL + config.url);
+    console.log('Request method:', config.method);
+    console.log('Request headers:', config.headers);
+    
     const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log('Added Authorization header');
+    } else {
+        console.log('No token found in localStorage');
     }
+    
+    console.log('Final request config:', config);
     return config;
 });
+
+// Add response interceptor for debugging
+axios.interceptors.response.use(
+    function (response) {
+        console.log('=== AXIOS RESPONSE SUCCESS ===');
+        console.log('Response URL:', response.config.url);
+        console.log('Response status:', response.status);
+        console.log('Response data:', response.data);
+        return response;
+    },
+    function (error) {
+        console.log('=== AXIOS RESPONSE ERROR ===');
+        console.log('Error URL:', error.config?.url);
+        console.log('Error status:', error.response?.status);
+        console.log('Error message:', error.message);
+        console.log('Error response data:', error.response?.data);
+        console.log('Full error object:', error);
+        return Promise.reject(error);
+    }
+);
 
 export const AppContext = createContext();
 
 export const AppContextProvider = ({children})=>{
+    console.log('=== APP CONTEXT PROVIDER LOADED ===');
+    console.log('Environment variables:');
+    console.log('VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
+    console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
+    console.log('VITE_CURRENCY:', import.meta.env.VITE_CURRENCY);
+    console.log('VITE_RAZORPAY_KEY_ID:', import.meta.env.VITE_RAZORPAY_KEY_ID);
 
-    const currency = import.meta.env.VITE_CURRENCY;
+    const currency = import.meta.env.VITE_CURRENCY || 'INR';
 
     const navigate = useNavigate();
     const [user, setUser] = useState(null)
@@ -30,8 +69,10 @@ export const AppContextProvider = ({children})=>{
 
     const [cartItems, setCartItems] = useState({})
     const [searchQuery, setSearchQuery] = useState({})
-    const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
-    const url = import.meta.env.VITE_BACKEND_URL; // Define url here
+    const razorpayKeyId = 'rzp_test_RH7Vojm8llKsRb';
+    console.log('Using Razorpay Key ID:', razorpayKeyId);
+    console.log('Environment VITE_RAZORPAY_KEY_ID:', import.meta.env.VITE_RAZORPAY_KEY_ID);
+    const url = import.meta.env.VITE_BACKEND_URL || 'https://greencart-production-6542.up.railway.app'; // Define url here
 
   // Fetch Seller Status
   const fetchSeller = async ()=>{
@@ -85,7 +126,7 @@ const fetchUser = async ()=>{
         }
         
         // Use the stored token to verify with the backend
-        const {data} = await axios.get('api/user/is-auth', { headers: { Authorization: `Bearer ${storedToken}` } });
+        const {data} = await axios.get('/api/user/is-auth', { headers: { Authorization: `Bearer ${storedToken}` } });
         if (data.success){
             setUser(data.user)
             setCartItems(data.user.cartItems)
@@ -106,13 +147,25 @@ const token = localStorage.getItem("token"); // This variable will be updated by
     // Fetch All Products
     const fetchProducts = async ()=>{
         try {
+            console.log('=== FETCH PRODUCTS DEBUG ===');
+            console.log('Backend URL:', axios.defaults.baseURL);
+            console.log('Full URL:', axios.defaults.baseURL + '/api/product/list');
+            console.log('Environment VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
+            
             const { data } = await axios.get('/api/product/list')
-            if(data.success){
-                setProducts(data.products)
-            }else{
-                toast.error(data.message)
-            }
+            console.log('Products fetched successfully:', data);
+            console.log('Setting products in state...');
+            // Our backend returns products directly, not wrapped in success/products
+            setProducts(data)
+            console.log('Products set in state successfully');
         } catch (error) {
+            console.error('=== ERROR FETCHING PRODUCTS ===');
+            console.error('Error object:', error);
+            console.error('Error message:', error.message);
+            console.error('Error response:', error.response);
+            console.error('Error response data:', error.response?.data);
+            console.error('Error response status:', error.response?.status);
+            console.error('Error response headers:', error.response?.headers);
             toast.error(error.message)
         }
     }

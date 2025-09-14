@@ -45,7 +45,7 @@ const MyOrders = () => {
                         {item.product ? (
                             <div className='flex items-center mb-4 md:mb-0'>
                                 <div className='bg-primary/10 p-4 rounded-lg'>
-                                    <img src={url + item.product.image[0]} alt="" className='w-16 h-16' />
+                                    <img src={item.product.image[0]} alt="" className='w-16 h-16' />
                                 </div>
                                 <div className='ml-4'>
                                     <h2 className='text-xl font-medium text-gray-800'>{item.product.name}</h2>
@@ -64,7 +64,7 @@ const MyOrders = () => {
                         <p>Date: {new Date(order.createdAt).toLocaleDateString()}</p>
                     </div>
                     <p className='text-primary text-lg font-medium'>
-                        Amount: {currency}{item.product.offerPrice * item.quantity}
+                        Amount: {currency}{(item.product.offerPrice || item.product.price || 0) * item.quantity}
                     </p>
                         
                     </div>

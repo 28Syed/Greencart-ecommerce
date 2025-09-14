@@ -16,7 +16,7 @@ const Wishlist = () => {
             return;
         }
         try {
-            const response = await axios.get(`${url}/api/wishlist`);
+            const response = await axios.get(`/api/wishlist`);
             if (response.data.success) {
                 setWishlistProducts(response.data.wishlist.products);
             } else {

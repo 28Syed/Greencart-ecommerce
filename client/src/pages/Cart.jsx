@@ -47,11 +47,25 @@ const Cart = () => {
     // Function to load the Razorpay script dynamically
     const loadRazorpayScript = () => {
         return new Promise((resolve) => {
+            // Check if Razorpay is already loaded
+            if (window.Razorpay) {
+                resolve(true);
+                return;
+            }
+            
             const script = document.createElement("script");
             script.src = "https://checkout.razorpay.com/v1/checkout.js";
-            script.onload = () => resolve(true);
-            script.onerror = () => resolve(false);
-            document.body.appendChild(script);
+            script.async = true;
+            script.onload = () => {
+                console.log("Razorpay script loaded successfully");
+                console.log("Razorpay object:", window.Razorpay);
+                resolve(true);
+            };
+            script.onerror = (error) => {
+                console.error("Failed to load Razorpay script:", error);
+                resolve(false);
+            };
+            document.head.appendChild(script);
         });
     };
 
@@ -81,71 +95,93 @@ const Cart = () => {
                 }
             } else if (paymentOption === "Online") {
                 // Place Order with Razorpay
+                console.log("Loading Razorpay script...");
                 const res = await loadRazorpayScript();
 
                 if (!res) {
-                    toast.error("Razorpay SDK failed to load. Are you online?");
+                    toast.error("Razorpay SDK failed to load. Please try Cash on Delivery instead.");
                     return;
                 }
+                
+                console.log("Razorpay script loaded, proceeding with payment...");
 
-                const orderData = await axios.post('/api/razorpay/order', {
-                    amount: totalAmount,
-                    addressId: selectedAddress._id,
-                    items: cartArray.map(item=> ({product: item._id, quantity: item.quantity})), // Add cart items here
-                });
+                try {
+                    const orderData = await axios.post('/api/razorpay/order', {
+                        amount: totalAmount,
+                        addressId: selectedAddress._id,
+                        items: cartArray.map(item=> ({product: item._id, quantity: item.quantity})),
+                    });
 
-                if (orderData.data.success) {
-                    const { order, newOrderId } = orderData.data;
+                    if (orderData.data.success) {
+                        const order = orderData.data.order;
+                        const newOrderId = order.id;
 
-                    const options = {
-                        key: razorpayKeyId,
-                        amount: order.amount,
-                        currency: order.currency,
-                        name: "GreenCart",
-                        description: "Payment for your order",
-                        order_id: order.id,
-                        handler: async function (response) {
-                            const paymentVerification = await axios.post('/api/razorpay/verify', {
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
-                                orderId: newOrderId, // Your internal order ID
-                            });
+                        console.log("Creating Razorpay payment with options:", {
+                            key: razorpayKeyId,
+                            amount: order.amount,
+                            currency: order.currency,
+                            order_id: order.id
+                        });
 
-                            if (paymentVerification.data.success) {
-                                toast.success(paymentVerification.data.message);
-                                setCartItems({});
-                                navigate('/my-orders');
-                            } else {
-                                toast.error(paymentVerification.data.message);
-                                // Optionally delete the pending order if verification fails
-                                // await axios.delete(`/api/order/${newOrderId}`); 
-                            }
-                        },
-                        prefill: {
-                            name: user.name,
-                            email: user.email,
-                            contact: user.phone || "", // Optional: user's phone number
-                        },
-                        notes: {
-                            address: `${selectedAddress.street}, ${selectedAddress.city}, ${selectedAddress.state}`, 
-                            orderId: newOrderId, // Your internal order ID
-                        },
-                        theme: {
-                            color: "#80B82D", // GreenCart primary color
-                        },
-                    };
+                        console.log("Razorpay object available:", !!window.Razorpay);
+                        console.log("Razorpay key being used:", razorpayKeyId);
 
-                    const rzp1 = new window.Razorpay(options);
-                    rzp1.open();
+                        const options = {
+                            key: razorpayKeyId,
+                            amount: order.amount,
+                            currency: order.currency,
+                            name: "GreenCart",
+                            description: "Payment for your order",
+                            order_id: order.id,
+                            handler: async function (response) {
+                                console.log("Payment successful:", response);
+                                const paymentVerification = await axios.post('/api/razorpay/verify', {
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                    orderId: newOrderId,
+                                });
 
-                } else {
-                    toast.error(orderData.data.message);
+                                if (paymentVerification.data.success) {
+                                    toast.success("Payment successful! Order placed.");
+                                    setCartItems({});
+                                    navigate('/my-orders');
+                                } else {
+                                    toast.error("Payment verification failed");
+                                }
+                            },
+                            prefill: {
+                                name: user.name,
+                                email: user.email,
+                                contact: user.phone || "",
+                            },
+                            notes: {
+                                address: `${selectedAddress.street}, ${selectedAddress.city}, ${selectedAddress.state}`,
+                                orderId: newOrderId,
+                            },
+                            theme: {
+                                color: "#80B82D",
+                            },
+                        };
+
+                        console.log("Opening Razorpay with options:", options);
+                        const rzp1 = new window.Razorpay(options);
+                        console.log("Razorpay instance created:", rzp1);
+                        rzp1.open();
+
+                    } else {
+                        toast.error(orderData.data.message);
+                    }
+                } catch (razorpayError) {
+                    console.error("Razorpay payment error:", razorpayError);
+                    toast.error("Payment initialization failed. Please try Cash on Delivery instead.");
                 }
             }
         } catch (error) {
             console.error("Error placing order:", error);
-            toast.error("Error placing order");
+            console.error("Error response:", error.response?.data);
+            console.error("Error status:", error.response?.status);
+            toast.error(`Error placing order: ${error.response?.data?.message || error.message}`);
         }
     }
 
@@ -156,7 +192,7 @@ const Cart = () => {
         }
     },[user])
     
-    return products.length > 0 && cartItems ? (
+    return products.length > 0 ? (
         <div className="flex flex-col md:flex-row mt-16">
             <div className='flex-1 max-w-4xl'>
                 <h1 className="text-3xl font-medium mb-6">
@@ -169,34 +205,45 @@ const Cart = () => {
                     <p className="text-center">Action</p>
                 </div>
 
-                {cartArray.map((product, index) => (
-                    <div key={index} className="grid grid-cols-[2fr_1fr_1fr] text-gray-500 items-center text-sm md:text-base font-medium pt-3">
-                        <div className="flex items-center md:gap-6 gap-3">
-                            <div onClick={()=>{
-                                navigate(`/products/${product.category.toLowerCase()}/${product._id}`); scrollTo(0,0)
-                            }} className="cursor-pointer w-24 h-24 flex items-center justify-center border border-gray-300 rounded">
-                                <img className="max-w-full h-full object-cover" src={`${url}${product.image[0]}`} alt={product.name} />
-                            </div>
-                            <div>
-                                <p className="hidden md:block font-semibold">{product.name}</p>
-                                <div className="font-normal text-gray-500/70">
-                                    <p>Weight: <span>{product.weight || "N/A"}</span></p>
-                                    <div className='flex items-center'>
-                                        <p>Qty:</p>
-                                        <select onChange={e => updateCartItem(product._id, Number(e.target.value))}  value={cartItems[product._id]} className='outline-none'>
-                                            {Array(cartItems[product._id] > 9 ? cartItems[product._id] : 9).fill('').map((_, index) => (
-                                                <option key={index} value={index + 1}>{index + 1}</option>
-                                            ))}
-                                        </select>
+                {cartArray.length > 0 ? (
+                    cartArray.map((product, index) => (
+                        <div key={index} className="grid grid-cols-[2fr_1fr_1fr] text-gray-500 items-center text-sm md:text-base font-medium pt-3">
+                            <div className="flex items-center md:gap-6 gap-3">
+                                <div onClick={()=>{
+                                    navigate(`/products/${product.category.toLowerCase()}/${product._id}`); scrollTo(0,0)
+                                }} className="cursor-pointer w-24 h-24 flex items-center justify-center border border-gray-300 rounded">
+                                    <img className="max-w-full h-full object-cover" src={product.image[0]} alt={product.name} />
+                                </div>
+                                <div>
+                                    <p className="hidden md:block font-semibold">{product.name}</p>
+                                    <div className="font-normal text-gray-500/70">
+                                        <p>Weight: <span>{product.weight || "N/A"}</span></p>
+                                        <div className='flex items-center'>
+                                            <p>Qty:</p>
+                                            <select onChange={e => updateCartItem(product._id, Number(e.target.value))}  value={cartItems[product._id]} className='outline-none'>
+                                                {Array(cartItems[product._id] > 9 ? cartItems[product._id] : 9).fill('').map((_, index) => (
+                                                    <option key={index} value={index + 1}>{index + 1}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <p className="text-center">{currency}{product.offerPrice * product.quantity}</p>
-                        <button onClick={()=> removeFromCart(product._id)} className="cursor-pointer mx-auto">
-                            <img src={assets.remove_icon} alt="remove" className="inline-block w-6 h-6" />
+                            <p className="text-center">{currency}{product.offerPrice * product.quantity}</p>
+                            <button onClick={()=> removeFromCart(product._id)} className="cursor-pointer mx-auto">
+                                <img src={assets.remove_icon} alt="remove" className="inline-block w-6 h-6" />
+                            </button>
+                        </div>)
+                    )
+                ) : (
+                    <div className="text-center py-16">
+                        <img src={assets.cart_icon} alt="empty cart" className="w-24 h-24 mx-auto mb-4 opacity-50" />
+                        <h3 className="text-xl font-medium text-gray-500 mb-2">Your cart is empty</h3>
+                        <p className="text-gray-400 mb-6">Add some products to get started</p>
+                        <button onClick={() => navigate("/products")} className="px-6 py-2 bg-primary text-white rounded-full hover:bg-primary-dull transition">
+                            Continue Shopping
                         </button>
-                    </div>)
+                    </div>
                 )}
 
                 <button onClick={()=> {navigate("/products"); scrollTo(0,0)}} className="group cursor-pointer flex items-center mt-8 gap-2 text-primary font-medium">

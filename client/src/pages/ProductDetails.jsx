@@ -33,7 +33,7 @@ const ProductDetails = () => {
     const fetchReviews = async () => {
         if (!product) return;
         try {
-            const response = await axios.get(`${url}/api/review/${product._id}`);
+            const response = await axios.get(`/api/review/${product._id}`);
             if (response.data.success) {
                 setReviews(response.data.reviews);
             } else {
@@ -59,11 +59,9 @@ const ProductDetails = () => {
             return;
         }
         try {
-            const response = await axios.post(`${url}/api/review/add/${product._id}`, {
+            const response = await axios.post(`/api/review/add/${product._id}`, {
                 rating: reviewRating,
                 comment: reviewComment,
-            }, {
-                headers: { token: token },
             });
             if (response.data.success) {
                 toast.success(response.data.message);
@@ -94,13 +92,13 @@ const ProductDetails = () => {
                     <div className="flex flex-col gap-3">
                         {product.image.map((image, index) => (
                             <div key={index} onClick={() => setThumbnail(image)} className="border max-w-24 border-gray-500/30 rounded overflow-hidden cursor-pointer" >
-                                <img src={`${url}${image}`} alt={`Thumbnail ${index + 1}`} />
+                                <img src={image} alt={`Thumbnail ${index + 1}`} />
                             </div>
                         ))}
                     </div>
 
                     <div className="border border-gray-500/30 max-w-100 rounded overflow-hidden">
-                        <img src={`${url}${thumbnail}`} alt="Selected product" />
+                        <img src={thumbnail} alt="Selected product" />
                     </div>
                 </div>
 
@@ -120,10 +118,10 @@ const ProductDetails = () => {
                         <p className="text-gray-500/70">(inclusive of all taxes)</p>
                     </div>
 
-                    {product.stock === 0 ? (
+                    {!product.inStock ? (
                         <p className="text-red-500 font-medium mt-6 text-lg">Out of Stock</p>
                     ) : (
-                        <p className="text-green-600 font-medium mt-6 text-lg">In Stock: {product.stock}</p>
+                        <p className="text-green-600 font-medium mt-6 text-lg">In Stock</p>
                     )}
 
                     <p className="text-base font-medium mt-6">About Product</p>
@@ -134,7 +132,7 @@ const ProductDetails = () => {
                     </ul>
 
                     <div className="flex items-center mt-10 gap-4 text-base">
-                        {product.stock > 0 ? (
+                        {product.inStock ? (
                             <button onClick={()=> addToCart(product._id)} className="w-full py-3.5 cursor-pointer font-medium bg-gray-100 text-gray-800/80 hover:bg-gray-200 transition" >
                                 Add to Cart
                             </button>
@@ -144,7 +142,7 @@ const ProductDetails = () => {
                             </button>
                         )}
 
-                        {product.stock > 0 ? (
+                        {product.inStock ? (
                             <button onClick={()=> {addToCart(product._id); navigate("/cart")}} className="w-full py-3.5 cursor-pointer font-medium bg-primary text-white hover:bg-primary-dull transition" >
                                 Buy now
                             </button>

@@ -13,7 +13,7 @@ const ProductCard = ({product}) => {
         const checkWishlist = async () => {
             if (token && product?._id) {
                 try {
-                    const response = await axios.get(`${url}/api/wishlist`, { headers: { token } });
+                    const response = await axios.get(`/api/wishlist`);
                     if (response.data.success) {
                         setIsWishlisted(response.data.wishlist.products.some(item => item._id === product._id));
                     }
@@ -35,9 +35,9 @@ const ProductCard = ({product}) => {
         try {
             let response;
             if (isWishlisted) {
-                response = await axios.delete(`${url}/api/wishlist/remove/${product._id}`, { headers: { token } });
+                response = await axios.delete(`/api/wishlist/remove/${product._id}`);
             } else {
-                response = await axios.post(`${url}/api/wishlist/add/${product._id}`, {}, { headers: { token } });
+                response = await axios.post(`/api/wishlist/add/${product._id}`, {});
             }
 
             if (response.data.success) {
@@ -55,15 +55,15 @@ const ProductCard = ({product}) => {
     return product && (
         <div onClick={()=> {navigate(`/products/${product.category.toLowerCase()}/${product._id}`); scrollTo(0,0)}} className="border border-gray-500/20 rounded-md md:px-4 px-3 py-2 bg-white min-w-56 max-w-56 w-full relative pt-10">
             <div className="group cursor-pointer flex items-center justify-center px-2">
-                <img className="group-hover:scale-105 transition max-w-26 md:max-w-36" src={`${url}${product.image[0]}`} alt={product.name} />
+                <img className="group-hover:scale-105 transition max-w-26 md:max-w-36" src={product.image[0]} alt={product.name} />
             </div>
             <div className="text-gray-500/60 text-sm">
                 <p>{product.category}</p>
                 <p className="text-gray-700 font-medium text-lg truncate w-full">{product.name}</p>
-                {product.stock === 0 ? (
+                {!product.inStock ? (
                     <p className="text-red-500 font-medium">Out of Stock</p>
                 ) : (
-                    <p className="text-green-600 text-sm">In Stock: {product.stock}</p>
+                    <p className="text-green-600 text-sm">In Stock</p>
                 )}
                 <div className="flex items-center gap-0.5">
                     {Array(5).fill('').map((_, i) => (

@@ -29,7 +29,7 @@ const ChatWidget = () => {
     const initializeChat = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/chat/session`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://greencart-production-6542.up.railway.app'}/api/chat/session`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -64,7 +64,7 @@ const ChatWidget = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/chat/message`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://greencart-production-6542.up.railway.app'}/api/chat/message`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
