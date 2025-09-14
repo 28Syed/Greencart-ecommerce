@@ -1119,28 +1119,19 @@ app.post('/api/chat/session', authenticateUser, async (req, res) => {
         const userId = req.user.id;
         const { sessionId } = req.body;
 
-        let chat;
-        if (sessionId) {
-            chat = await Chat.findOne({ userId, sessionId, isActive: true });
-        }
-
-        if (!chat) {
-            const newSessionId = "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-            chat = await Chat.create({
-                userId,
-                sessionId: newSessionId,
-                messages: [{
-                    role: 'assistant',
-                    content: 'Hello! I\'m your GreenCart assistant. How can I help you today? I can help you with orders, products, account issues, or any other questions you might have.',
-                    timestamp: new Date()
-                }]
-            });
-        }
+        // For now, use in-memory storage instead of database
+        const newSessionId = sessionId || "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+        
+        const welcomeMessage = {
+            role: 'assistant',
+            content: 'Hello! I\'m your GreenCart assistant. How can I help you today? I can help you with orders, products, account issues, or any other questions you might have.',
+            timestamp: new Date()
+        };
 
         res.json({
             success: true,
-            sessionId: chat.sessionId,
-            messages: chat.messages
+            sessionId: newSessionId,
+            messages: [welcomeMessage]
         });
 
     } catch (error) {
@@ -1158,59 +1149,8 @@ app.post('/api/chat/message', authenticateUser, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Message and sessionId are required' });
         }
 
-        // Get chat session
-        let chat = await Chat.findOne({ userId, sessionId, isActive: true });
-        if (!chat) {
-            return res.status(404).json({ success: false, message: 'Chat session not found' });
-        }
-
-        // Add user message
-        chat.messages.push({
-            role: 'user',
-            content: message,
-            timestamp: new Date()
-        });
-
-        // Get user context for AI with error handling
-        let user, recentOrders = [];
-        try {
-            user = await User.findById(userId).populate('cartItems.product');
-            recentOrders = await Order.find({ userId })
-                .populate('items.product')
-                .sort({ createdAt: -1 })
-                .limit(3);
-        } catch (dbError) {
-            console.error('[Database Error]', dbError.message);
-            user = { name: 'User', email: 'user@example.com', cartItems: [] };
-        }
-
-        // Prepare context for AI
-        const context = {
-            user: {
-                name: user?.name || 'User',
-                email: user?.email || 'user@example.com',
-                cartItems: user?.cartItems?.length || 0,
-                recentOrders: recentOrders.length
-            },
-            recentOrders: recentOrders.map(order => ({
-                id: order._id,
-                amount: order.amount,
-                status: order.status,
-                items: order.items.length,
-                date: order.createdAt
-            }))
-        };
-
-        // Create system prompt with context
+        // Create system prompt
         const systemPrompt = `You are a helpful AI assistant for GreenCart, an online grocery store. 
-        
-        User Context:
-        - Name: ${context.user.name}
-        - Email: ${context.user.email}
-        - Cart Items: ${context.user.cartItems}
-        - Recent Orders: ${context.user.recentOrders}
-        
-        Recent Orders: ${JSON.stringify(context.recentOrders)}
         
         You can help with:
         - Product recommendations
@@ -1221,18 +1161,16 @@ app.post('/api/chat/message', authenticateUser, async (req, res) => {
         
         Keep responses helpful, friendly, and concise. If you don't know something specific about the user's account, ask them to check their account or contact support.`;
 
-        const messages = [
-            { role: 'system', content: systemPrompt },
-            ...chat.messages.slice(-10) // Last 10 messages for context
-        ];
-
         // Get AI response from OpenAI with error handling
         let aiResponse = "I'm here to help! How can I assist you today?";
         
         try {
             const completion = await openai.chat.completions.create({
                 model: "gpt-3.5-turbo",
-                messages: messages,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: message }
+                ],
                 max_tokens: 300,
                 temperature: 0.7,
             });
@@ -1252,24 +1190,15 @@ app.post('/api/chat/message', authenticateUser, async (req, res) => {
                 aiResponse = "I'm here to help! I can assist you with orders, products, account issues, or any other questions about GreenCart.";
             } else if (messageLower.includes('thank')) {
                 aiResponse = "You're welcome! Is there anything else I can help you with?";
+            } else {
+                aiResponse = "I'm here to help! How can I assist you with your GreenCart shopping today?";
             }
         }
-
-        // Add AI response to chat
-        chat.messages.push({
-            role: 'assistant',
-            content: aiResponse,
-            timestamp: new Date()
-        });
-
-        // Update last activity
-        chat.lastActivity = new Date();
-        await chat.save();
 
         res.json({
             success: true,
             message: aiResponse,
-            sessionId: chat.sessionId
+            sessionId: sessionId
         });
 
     } catch (error) {
