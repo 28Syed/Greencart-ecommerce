@@ -741,6 +741,93 @@ app.get('/api/address/get', (req, res) => {
     });
 });
 
+// Add new address
+app.post('/api/address/add', (req, res) => {
+    try {
+        const { firstName, lastName, street, city, state, zipcode, country, phone } = req.body;
+        
+        // Generate a new address ID
+        const addressId = "addr_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+        
+        const newAddress = {
+            _id: addressId,
+            firstName,
+            lastName,
+            street,
+            city,
+            state,
+            zipcode,
+            country,
+            phone
+        };
+        
+        res.json({
+            success: true,
+            message: "Address added successfully",
+            address: newAddress
+        });
+        
+    } catch (error) {
+        console.error('[Add Address] Error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to add address' 
+        });
+    }
+});
+
+// Update address
+app.put('/api/address/update/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        const { firstName, lastName, street, city, state, zipcode, country, phone } = req.body;
+        
+        const updatedAddress = {
+            _id: id,
+            firstName,
+            lastName,
+            street,
+            city,
+            state,
+            zipcode,
+            country,
+            phone
+        };
+        
+        res.json({
+            success: true,
+            message: "Address updated successfully",
+            address: updatedAddress
+        });
+        
+    } catch (error) {
+        console.error('[Update Address] Error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to update address' 
+        });
+    }
+});
+
+// Delete address
+app.delete('/api/address/delete/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        res.json({
+            success: true,
+            message: "Address deleted successfully"
+        });
+        
+    } catch (error) {
+        console.error('[Delete Address] Error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to delete address' 
+        });
+    }
+});
+
 // In-memory wishlist storage (in production, this would be in a database)
 const wishlists = {};
 
@@ -866,7 +953,7 @@ app.get('/api/seller/is-auth', (req, res) => {
 });
 
 app.get('/api/order/seller', (req, res) => {
-    res.json({
+    res.json({ 
         success: true,
         orders: [
             {
@@ -933,7 +1020,7 @@ app.post('/api/order/cod', authenticateUser, (req, res) => {
     
     orders[userId].push(newOrder);
     
-    res.json({
+    res.json({ 
         success: true,
         message: "Order placed successfully with Cash on Delivery",
         orderId: orderId,
