@@ -18,7 +18,16 @@ app.use((req, res, next) => {
 
 // Test route
 app.get('/', (req, res) => {
-    res.json({ message: "API is Working" });
+    res.json({ message: "API is Working - Updated with Chat Support" });
+});
+
+// Test chat endpoint
+app.get('/api/chat/test', (req, res) => {
+    res.json({ 
+        success: true, 
+        message: "Chat API is working!",
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Products API - This is what your frontend needs
