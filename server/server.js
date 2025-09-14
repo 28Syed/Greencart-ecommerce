@@ -3,6 +3,8 @@ import cors from 'cors';
 import Razorpay from 'razorpay';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import mongoose from 'mongoose';
+import OpenAI from 'openai';
 
 dotenv.config();
 
@@ -13,6 +15,47 @@ const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_RH7Vojm8llKsRb',
     key_secret: process.env.RAZORPAY_KEY_SECRET || 'U839sMZljuqAfnOmMUz7eVZg'
 });
+
+// Initialize OpenAI
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY || 'sk-proj-1234567890'
+});
+
+// Database connection
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/greencart', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+});
+
+// Database Models
+const User = mongoose.model('user', new mongoose.Schema({
+    name: String,
+    email: String,
+    password: String,
+    cartItems: [{ product: { type: mongoose.Schema.Types.ObjectId, ref: 'product' }, quantity: Number }]
+}, { timestamps: true }));
+
+const Order = mongoose.model('order', new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
+    items: [{ product: { type: mongoose.Schema.Types.ObjectId, ref: 'product' }, quantity: Number }],
+    amount: Number,
+    status: String,
+    paymentMethod: String,
+    addressId: String
+}, { timestamps: true }));
+
+const Chat = mongoose.model('chat', new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user', required: true },
+    sessionId: { type: String, required: true },
+    messages: [{
+        role: { type: String, enum: ['user', 'assistant', 'system'], required: true },
+        content: { type: String, required: true },
+        timestamp: { type: Date, default: Date.now }
+    }],
+    isActive: { type: Boolean, default: true },
+    lastActivity: { type: Date, default: Date.now }
+}, { timestamps: true }));
+
 const port = process.env.PORT || 4000;
 
 // Middleware
@@ -1071,18 +1114,168 @@ app.post('/api/razorpay/verify', authenticateUser, async (req, res) => {
 });
 
 // Chat routes
-app.post('/api/chat/session', (req, res) => {
-    res.json({ 
-        success: true,
-        sessionId: "session123"
-    });
+app.post('/api/chat/session', authenticateUser, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { sessionId } = req.body;
+
+        let chat;
+        if (sessionId) {
+            chat = await Chat.findOne({ userId, sessionId, isActive: true });
+        }
+
+        if (!chat) {
+            const newSessionId = "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+            chat = await Chat.create({
+                userId,
+                sessionId: newSessionId,
+                messages: [{
+                    role: 'assistant',
+                    content: 'Hello! I\'m your GreenCart assistant. How can I help you today? I can help you with orders, products, account issues, or any other questions you might have.',
+                    timestamp: new Date()
+                }]
+            });
+        }
+
+        res.json({
+            success: true,
+            sessionId: chat.sessionId,
+            messages: chat.messages
+        });
+
+    } catch (error) {
+        console.error('[Chat Session] Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to create chat session' });
+    }
 });
 
-app.post('/api/chat/message', (req, res) => {
-    res.json({ 
-        success: true,
-        message: "AI response"
-    });
+app.post('/api/chat/message', authenticateUser, async (req, res) => {
+    try {
+        const { message, sessionId } = req.body;
+        const userId = req.user.id;
+
+        if (!message || !sessionId) {
+            return res.status(400).json({ success: false, message: 'Message and sessionId are required' });
+        }
+
+        // Get chat session
+        let chat = await Chat.findOne({ userId, sessionId, isActive: true });
+        if (!chat) {
+            return res.status(404).json({ success: false, message: 'Chat session not found' });
+        }
+
+        // Add user message
+        chat.messages.push({
+            role: 'user',
+            content: message,
+            timestamp: new Date()
+        });
+
+        // Get user context for AI with error handling
+        let user, recentOrders = [];
+        try {
+            user = await User.findById(userId).populate('cartItems.product');
+            recentOrders = await Order.find({ userId })
+                .populate('items.product')
+                .sort({ createdAt: -1 })
+                .limit(3);
+        } catch (dbError) {
+            console.error('[Database Error]', dbError.message);
+            user = { name: 'User', email: 'user@example.com', cartItems: [] };
+        }
+
+        // Prepare context for AI
+        const context = {
+            user: {
+                name: user?.name || 'User',
+                email: user?.email || 'user@example.com',
+                cartItems: user?.cartItems?.length || 0,
+                recentOrders: recentOrders.length
+            },
+            recentOrders: recentOrders.map(order => ({
+                id: order._id,
+                amount: order.amount,
+                status: order.status,
+                items: order.items.length,
+                date: order.createdAt
+            }))
+        };
+
+        // Create system prompt with context
+        const systemPrompt = `You are a helpful AI assistant for GreenCart, an online grocery store. 
+        
+        User Context:
+        - Name: ${context.user.name}
+        - Email: ${context.user.email}
+        - Cart Items: ${context.user.cartItems}
+        - Recent Orders: ${context.user.recentOrders}
+        
+        Recent Orders: ${JSON.stringify(context.recentOrders)}
+        
+        You can help with:
+        - Product recommendations
+        - Order status and tracking
+        - Account issues
+        - General questions about GreenCart
+        - Shopping assistance
+        
+        Keep responses helpful, friendly, and concise. If you don't know something specific about the user's account, ask them to check their account or contact support.`;
+
+        const messages = [
+            { role: 'system', content: systemPrompt },
+            ...chat.messages.slice(-10) // Last 10 messages for context
+        ];
+
+        // Get AI response from OpenAI with error handling
+        let aiResponse = "I'm here to help! How can I assist you today?";
+        
+        try {
+            const completion = await openai.chat.completions.create({
+                model: "gpt-3.5-turbo",
+                messages: messages,
+                max_tokens: 300,
+                temperature: 0.7,
+            });
+
+            aiResponse = completion.choices[0].message.content;
+        } catch (openaiError) {
+            console.error('[OpenAI Error]', openaiError.message);
+            // Fallback to simple responses if OpenAI fails
+            const messageLower = message.toLowerCase();
+            if (messageLower.includes('hello') || messageLower.includes('hi')) {
+                aiResponse = "Hello! Welcome to GreenCart. How can I help you today?";
+            } else if (messageLower.includes('order')) {
+                aiResponse = "I can help you with your orders. What would you like to know about your orders?";
+            } else if (messageLower.includes('product')) {
+                aiResponse = "We have a great selection of fresh products! What specific product are you looking for?";
+            } else if (messageLower.includes('help')) {
+                aiResponse = "I'm here to help! I can assist you with orders, products, account issues, or any other questions about GreenCart.";
+            } else if (messageLower.includes('thank')) {
+                aiResponse = "You're welcome! Is there anything else I can help you with?";
+            }
+        }
+
+        // Add AI response to chat
+        chat.messages.push({
+            role: 'assistant',
+            content: aiResponse,
+            timestamp: new Date()
+        });
+
+        // Update last activity
+        chat.lastActivity = new Date();
+        await chat.save();
+
+        res.json({
+            success: true,
+            message: aiResponse,
+            sessionId: chat.sessionId
+        });
+
+    } catch (error) {
+        console.error('[Chat Message] Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to send message' });
+    }
 });
 
 // Start server
