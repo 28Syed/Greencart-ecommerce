@@ -19,7 +19,6 @@ import ProductList from './pages/seller/ProductList';
 import Orders from './pages/seller/Orders';
 import Loading from './components/Loading';
 import Wishlist from './pages/Wishlist';
-import ChatWidget from './components/ChatWidget';
 
 const App = () => {
 
@@ -53,7 +52,6 @@ const App = () => {
         </Routes>
       </div>
      {!isSellerPath && <Footer/>}
-     <ChatWidget />
     </div>
   )
 }

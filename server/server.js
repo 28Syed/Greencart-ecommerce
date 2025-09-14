@@ -4,7 +4,6 @@ import Razorpay from 'razorpay';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
-import OpenAI from 'openai';
 
 dotenv.config();
 
@@ -16,10 +15,6 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET || 'U839sMZljuqAfnOmMUz7eVZg'
 });
 
-// Initialize OpenAI
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || 'sk-proj-1234567890'
-});
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/greencart', {
@@ -44,17 +39,6 @@ const Order = mongoose.model('order', new mongoose.Schema({
     addressId: String
 }, { timestamps: true }));
 
-const Chat = mongoose.model('chat', new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user', required: true },
-    sessionId: { type: String, required: true },
-    messages: [{
-        role: { type: String, enum: ['user', 'assistant', 'system'], required: true },
-        content: { type: String, required: true },
-        timestamp: { type: Date, default: Date.now }
-    }],
-    isActive: { type: Boolean, default: true },
-    lastActivity: { type: Date, default: Date.now }
-}, { timestamps: true }));
 
 const port = process.env.PORT || 4000;
 
@@ -1113,99 +1097,6 @@ app.post('/api/razorpay/verify', authenticateUser, async (req, res) => {
     }
 });
 
-// Chat routes
-app.post('/api/chat/session', authenticateUser, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const { sessionId } = req.body;
-
-        // For now, use in-memory storage instead of database
-        const newSessionId = sessionId || "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-        
-        const welcomeMessage = {
-            role: 'assistant',
-            content: 'Hello! I\'m your GreenCart assistant. How can I help you today? I can help you with orders, products, account issues, or any other questions you might have.',
-            timestamp: new Date()
-        };
-
-        res.json({
-            success: true,
-            sessionId: newSessionId,
-            messages: [welcomeMessage]
-        });
-
-    } catch (error) {
-        console.error('[Chat Session] Error:', error);
-        res.status(500).json({ success: false, message: 'Failed to create chat session' });
-    }
-});
-
-app.post('/api/chat/message', authenticateUser, async (req, res) => {
-    try {
-        const { message, sessionId } = req.body;
-        const userId = req.user.id;
-
-        if (!message || !sessionId) {
-            return res.status(400).json({ success: false, message: 'Message and sessionId are required' });
-        }
-
-        // Create system prompt
-        const systemPrompt = `You are a helpful AI assistant for GreenCart, an online grocery store. 
-        
-        You can help with:
-        - Product recommendations
-        - Order status and tracking
-        - Account issues
-        - General questions about GreenCart
-        - Shopping assistance
-        
-        Keep responses helpful, friendly, and concise. If you don't know something specific about the user's account, ask them to check their account or contact support.`;
-
-        // Get AI response from OpenAI with error handling
-        let aiResponse = "I'm here to help! How can I assist you today?";
-        
-        try {
-            const completion = await openai.chat.completions.create({
-                model: "gpt-3.5-turbo",
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: message }
-                ],
-                max_tokens: 300,
-                temperature: 0.7,
-            });
-
-            aiResponse = completion.choices[0].message.content;
-        } catch (openaiError) {
-            console.error('[OpenAI Error]', openaiError.message);
-            // Fallback to simple responses if OpenAI fails
-            const messageLower = message.toLowerCase();
-            if (messageLower.includes('hello') || messageLower.includes('hi')) {
-                aiResponse = "Hello! Welcome to GreenCart. How can I help you today?";
-            } else if (messageLower.includes('order')) {
-                aiResponse = "I can help you with your orders. What would you like to know about your orders?";
-            } else if (messageLower.includes('product')) {
-                aiResponse = "We have a great selection of fresh products! What specific product are you looking for?";
-            } else if (messageLower.includes('help')) {
-                aiResponse = "I'm here to help! I can assist you with orders, products, account issues, or any other questions about GreenCart.";
-            } else if (messageLower.includes('thank')) {
-                aiResponse = "You're welcome! Is there anything else I can help you with?";
-            } else {
-                aiResponse = "I'm here to help! How can I assist you with your GreenCart shopping today?";
-            }
-        }
-
-        res.json({
-            success: true,
-            message: aiResponse,
-            sessionId: sessionId
-        });
-
-    } catch (error) {
-        console.error('[Chat Message] Error:', error);
-        res.status(500).json({ success: false, message: 'Failed to send message' });
-    }
-});
 
 // Start server
 app.listen(port, () => {
