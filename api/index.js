@@ -91,6 +91,68 @@ app.post('/api/cart/add', (req, res) => {
     });
 });
 
+// Chat routes
+app.post('/api/chat/session', (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        const newSessionId = sessionId || "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+        
+        const welcomeMessage = {
+            role: 'assistant',
+            content: 'Hello! I\'m your GreenCart assistant. How can I help you today? I can help you with orders, products, account issues, or any other questions you might have.',
+            timestamp: new Date()
+        };
+
+        res.json({
+            success: true,
+            sessionId: newSessionId,
+            messages: [welcomeMessage]
+        });
+
+    } catch (error) {
+        console.error('[Chat Session] Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to create chat session' });
+    }
+});
+
+app.post('/api/chat/message', (req, res) => {
+    try {
+        const { message, sessionId } = req.body;
+
+        if (!message || !sessionId) {
+            return res.status(400).json({ success: false, message: 'Message and sessionId are required' });
+        }
+
+        // Simple AI responses without OpenAI for now
+        let aiResponse = "I'm here to help! How can I assist you today?";
+        
+        const messageLower = message.toLowerCase();
+        if (messageLower.includes('hello') || messageLower.includes('hi')) {
+            aiResponse = "Hello! Welcome to GreenCart. How can I help you today?";
+        } else if (messageLower.includes('order')) {
+            aiResponse = "I can help you with your orders. What would you like to know about your orders?";
+        } else if (messageLower.includes('product')) {
+            aiResponse = "We have a great selection of fresh products! What specific product are you looking for?";
+        } else if (messageLower.includes('help')) {
+            aiResponse = "I'm here to help! I can assist you with orders, products, account issues, or any other questions about GreenCart.";
+        } else if (messageLower.includes('thank')) {
+            aiResponse = "You're welcome! Is there anything else I can help you with?";
+        } else {
+            aiResponse = "I'm here to help! How can I assist you with your GreenCart shopping today?";
+        }
+
+        res.json({
+            success: true,
+            message: aiResponse,
+            sessionId: sessionId
+        });
+
+    } catch (error) {
+        console.error('[Chat Message] Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to send message' });
+    }
+});
+
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
